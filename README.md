@@ -36,7 +36,7 @@ Ensure the relevant tables contain recent logs:
 
 #### Initial Findings:
 
-The Windows VM, win-vm-mde was found failing several connection requests against another host on the same network.
+The Windows VM, `win-vm-mde` was found failing several connection requests against another host on the same network.
 
 ```kql
 DeviceNetworkEvents
