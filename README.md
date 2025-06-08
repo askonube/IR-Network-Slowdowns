@@ -53,7 +53,7 @@ DeviceNetworkEvents
 
 ### Findings
 
-After observing failed connection requests from a suspected host `(10.0.0.137)` in chronological order, we noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
+After observing failed connection requests from a suspected host `10.0.0.137` in chronological order, we noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
 
 ```kql
 let IPinQuestion = "10.0.0.137";
