@@ -1,5 +1,5 @@
 
-# Sudden Network Slowdowns
+# Network Slowdown
 
 ## Overview
 
@@ -32,19 +32,20 @@ Ensure the relevant tables contain recent logs:
 - DeviceNetworkEvents
 - DeviceFileEvents
 - DeviceProcessEvents
-```kql
+```
 
 #### Initial Findings:
 
-We did a search within MDE DeviceFileEvents for any activities with zip files, and found a lot of normal activity of archiving files and moving them to a "backup" folder.
+The Windows VM, win-vm-mde was found failing several connection requests against another host on the same network.
 
 ```kql
-DeviceFileEvents
-| where DeviceName == "win-vm-mde"
-| where FileName endswith ".zip"
-| order by Timestamp desc
+DeviceNetworkEvents
+| where ActionType == "ConnectionFailed"
+| where DeviceName startswith "win-vm-m"
+| summarize ConnectionCount = count() by DeviceName, ActionType, LocalIP
+| order by ConnectionCount
 ```
-<img width="1298" alt="Pasted image 20250329155117" src="https://github.com/user-attachments/assets/63e551f6-3f95-4a13-9797-5c5d8224e77a" />
+![image](https://github.com/user-attachments/assets/a2491475-96dd-4997-bad4-0b0a1b6f3108)
 
 ---
 
@@ -52,37 +53,42 @@ DeviceFileEvents
 
 ### Findings
 
-I took one of the instances of a zip file being created, took the timestamp and searched under DeviceProcessEvents for anything happening 2 minutes before the archive was created and 2 minutes after. I discovered around the same time that a powershell script silently installed 7zip and then used 7zip to zip up employee data into an archive: 
-
-
-```kql
-let VMName = "win-vm-mde";
-let specificTime = datetime(2025-03-29T07:17:11.3510997Z);
-DeviceProcessEvents
-| where Timestamp between ((specificTime - 2m) .. (specificTime + 2m))
-| where DeviceName == VMName
-| order by Timestamp desc
-| project Timestamp, DeviceName, ActionType, FileName, ProcessCommandLine, InitiatingProcessCommandLine
-```
-
-<img width="1376" alt="Pasted image 20250329161935" src="https://github.com/user-attachments/assets/39b2327f-4ec6-4949-9741-aceec3d52670" />
-
-
-### Exfiltration Check
-
-I searched around the same time period for any evidence of exfiltration querying `DeviceNetworkEvents`. There were a few successful connections based on the ActionTypes that were labelled ConnectionSuccess, but none of them contained any signs of external data transfer.
+After observing failed connection requests from a suspected host (10.0.0.137) in chronological order, I noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
 
 ```kql
-let VMName = "win-vm-mde";
-let specificTime = datetime(2025-03-29T07:17:11.3510997Z);
+let IPinQuestion = "10.0.0.137";
 DeviceNetworkEvents
-| where Timestamp between ((specificTime - 2m) .. (specificTime + 2m))
-| where DeviceName == VMName
+| where ActionType == 'ConnectionFailed'
+| where LocalIP == IPinQuestion
 | order by Timestamp desc
-| project Timestamp, DeviceName, ActionType
 ```
 
----
+![image](https://github.com/user-attachments/assets/9bf95e1d-0ef7-4bff-ae74-bdb571a326b5)
+
+![image](https://github.com/user-attachments/assets/3dceadab-d92f-4ea4-a9e6-6afb049ad088)
+
+We can see that the first port that was scanned started on 09 June 2025 at 00:30:19 or 2025-06-08T16:30:19.4145359Z. We pivoted to the DeviceProcessEvents table to see if we could see anything suspicious and specified 10 minutes before and after the port scan started. We noticed a PowerShell script named portscan.ps1 launch at 2025-06-08T16:29:40.1687498Z.
+
+```kql
+let VMName = "win-vm-mde";
+let specificTime = datetime(2025-06-08T16:30:19.4145359Z);
+DeviceProcessEvents
+| where Timestamp between ((specificTime - 10m) .. (specificTime + 10m))
+| where DeviceName == VMName
+| order by Timestamp desc
+| project Timestamp, FileName, InitiatingProcessCommandLine
+
+```
+<img width="973" alt="Screenshot 2025-06-09 014536" src="https://github.com/user-attachments/assets/2ad379da-fa9b-4bf7-b28c-4fc1e5ea6787" />
+
+
+I logged into the suspect computer and observed the PowerShell script that was used to conduct a port scan.
+
+<img width="758" alt="Pasted image 20250329134622" src="https://github.com/user-attachments/assets/5d49885c-ea06-4ec3-b459-d741d8b840e2" />
+
+We observed the port scan script was launched by the SYSTEM account, which is unexpected behaviour and was not configured by the other administrators. I isolated the device and ran a malware scan. 
+
+On the security.microsoft.com website, I isolated the suspected device and ran an antivirus scan. The malware scan produced no results, so out of caution, we kept the device isolated and put in a ticket to have it reimage/rebuilt.
 
 ## 4. Investigation
 
