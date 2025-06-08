@@ -82,13 +82,11 @@ DeviceProcessEvents
 <img width="973" alt="Screenshot 2025-06-09 014536" src="https://github.com/user-attachments/assets/2ad379da-fa9b-4bf7-b28c-4fc1e5ea6787" />
 
 
-I logged into the suspect computer and observed the PowerShell script that was used to conduct a port scan.
+The suspected computer was accessed and found the PowerShell script that was used to conduct a port scan.
 
 <img width="758" alt="Pasted image 20250329134622" src="https://github.com/user-attachments/assets/5d49885c-ea06-4ec3-b459-d741d8b840e2" />
 
-We observed the port scan script was launched by the SYSTEM account, which is unexpected behaviour and was not configured by the other administrators. I isolated the device and ran a malware scan. 
-
-On the security.microsoft.com website, I isolated the suspected device and ran an antivirus scan. The malware scan produced no results, so out of caution, we kept the device isolated and put in a ticket to have it reimaged/rebuilt.
+We observed the port scan script was launched by the SYSTEM account, which is unexpected behaviour and was not configured by the other administrators. The device was then isolated and scanned for malware. The malware scan produced no results, so out of caution, the device was kept isolated and planned to have it reimaged/rebuilt.
 
 ## 4. Investigation
 
