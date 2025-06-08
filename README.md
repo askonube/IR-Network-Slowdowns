@@ -88,38 +88,39 @@ I logged into the suspect computer and observed the PowerShell script that was u
 
 We observed the port scan script was launched by the SYSTEM account, which is unexpected behaviour and was not configured by the other administrators. I isolated the device and ran a malware scan. 
 
-On the security.microsoft.com website, I isolated the suspected device and ran an antivirus scan. The malware scan produced no results, so out of caution, we kept the device isolated and put in a ticket to have it reimage/rebuilt.
+On the security.microsoft.com website, I isolated the suspected device and ran an antivirus scan. The malware scan produced no results, so out of caution, we kept the device isolated and put in a ticket to have it reimaged/rebuilt.
 
 ## 4. Investigation
 
-- John, an employee with privileged access, used PowerShell scripts (T1059.001) to silently install 7-Zip (T1105), a compression utility.
+**Suspicious Activity Origin**: An endpoint within the 10.0.0.0/16 network, specifically the Windows VM "win-vm-mde" (IP: 10.0.0.137), initiated unusual activity causing a significant network slowdown, as observed by the networking team on June 09, 2025.
 
-- He continuously archived and moved the files to backup folders, which may serve as a method to hide or remove original data (T1070.004), complicating detection efforts.
-    
-- He compressed sensitive employee data into ZIP archives (T1560.001) as part of local data staging (T1074), consolidating files in preparation for potential exfiltration.
+**Potential Reconnaissance**: The sequential scanning of IP addresses within the 10.0.0.0/16 network indicates an attempt to gather information about the internal network, possibly as a precursor to further attacks or to map the environment (T1595.001: Scanning IP Blocks).
+
+**Discovery via Port Scanning**: The device conducted a port scan, systematically targeting sequential ports on other hosts within the LAN, as detected by numerous failed connection attempts in Microsoft Defender for Endpoint logs (T1046: Network Service Discovery), likely to identify vulnerable systems or services.
+
+**PowerShell Execution**: A PowerShell script named portscan.ps1 was executed on "win-vm-mde" at 2025-06-08T16:29:40.1687498Z, just before the port scan began, leveraging PowerShell’s capabilities to automate the scanning process (T1059.001: PowerShell).
+
+**Unexpected SYSTEM Account Usage**: The portscan.ps1 script ran under the SYSTEM account, an unusual and unconfigured action by administrators, suggesting a misuse of legitimate credentials (T1078: Valid Accounts).
     
     
 ### MITRE ATT&CK TTPs
 
-1. **Tactic:** Command and Scripting Interpreter: PowerShell (T1059.001)
+1. **Tactic: Reconnaissance (TA0043)** 
     
-    - **Technique:** PowerShell was used to silently install 7-Zip and create ZIP archives. This suggests malicious use of PowerShell for script execution to automate data collection and compression.
+    - **Technique: Scanning IP Blocks (T1595.001)** Adversaries scan IP blocks to identify targets, often as a precursor to attacks. The scans were done on targeted hosts within the 10.0.0.0/16 network, as seen in failed connection attempts.
+ 
+2. **Tactic: Execution (TA0002)** 
+    
+    - **Technique: PowerShell (T1059.001)** Adversaries use PowerShell to execute commands or scripts, often for malicious purposes, due to its legitimate use and powerful capabilities. The KQL query on `DeviceProcessEvents` identified `portscan.ps1`, a PowerShell script, launched at 2025-06-08T16:29:40.1687498Z, just before the port scan.
         
-2. **Tactic:** Archive Collected Data: Archive via Utility (T1560.001)
-    
-    - **Technique:** The use of 7-Zip to compress data into an archive aligns with this technique, where data is collected and compressed before potential exfiltration.
         
-3. **Tactic:** Data Staged (T1074)
+3. **Tactic: Privilege Escalation (TA0004)** 
     
-    - **Technique:** Data was staged locally by creating ZIP archives of sensitive employee data, consolidating files into a central location prior to exfiltration. This staging often involves interactive command shells or scripts (e.g., PowerShell) to gather, compress, and prepare data for transfer, minimizing detection risk.
-        
-4. **Tactic:** Indicator Removal on Host: File Deletion (T1070.004)
+    - **Technique: Valid Accounts (T1078)**  Adversaries use legitimate credentials (e.g., compromised or misused) to execute actions, possibly as the SYSTEM account. The `portscan.ps1` script was executed by the SYSTEM account, which was unexpected and not configured by administrators.
+  
+4. **Tactic: Discovery (TA0007)** 
     
-    - **Technique:** The consistent archiving and moving of files to backup folders may indicate attempts to obscure or stage data, potentially to avoid detection by removing or hiding original files.
-        
-5. **Tactic:** Ingress Tool Transfer (T1105)
-    
-    - **Technique:** The silent installation of 7-Zip shows the adversary transferred and installed a tool onto the target system to facilitate data compression and staging.
+    - **Technique: Network Service Discovery (T1046)** Adversaries use port scanning to identify open ports and services on target hosts within the network. The KQL query on DeviceNetworkEvents revealed that the failed connection attempts from 10.0.0.137 targeted ports in a sequential and chronological pattern, focusing on commonly used ports. This behavior strongly indicates a methodical port scan conducted around 2025-06-08T16:30:19.4145359Z.
 
 ---
 
