@@ -53,7 +53,7 @@ DeviceNetworkEvents
 
 ### Findings
 
-After observing failed connection requests from a suspected host (10.0.0.137) in chronological order, I noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
+After observing failed connection requests from a suspected host (10.0.0.137) in chronological order, we noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
 
 ```kql
 let IPinQuestion = "10.0.0.137";
@@ -76,17 +76,17 @@ DeviceProcessEvents
 | where Timestamp between ((specificTime - 10m) .. (specificTime + 10m))
 | where DeviceName == VMName
 | order by Timestamp desc
-| project Timestamp, FileName, InitiatingProcessCommandLine
+| project Timestamp, FileName, InitiatingProcessCommandLine, AccountName
 
 ```
-<img width="973" alt="Screenshot 2025-06-09 014536" src="https://github.com/user-attachments/assets/2ad379da-fa9b-4bf7-b28c-4fc1e5ea6787" />
+<img width="1085" alt="Screenshot 2025-06-09 032032" src="https://github.com/user-attachments/assets/dfbc8082-7669-4b29-ad50-61d0a9adc7ab" />
 
 
 We accessed the suspected computer and found the PowerShell script that was used to conduct a port scan.
 
 <img width="758" alt="Pasted image 20250329134622" src="https://github.com/user-attachments/assets/5d49885c-ea06-4ec3-b459-d741d8b840e2" />
 
-We observed the port scan script was launched by the SYSTEM account, which is unexpected behaviour and was not configured by the other administrators. The device was then isolated and scanned for malware. The malware scan produced no results, so out of caution, the device was kept isolated and planned to have it reimaged/rebuilt.
+We observed the port scan script was launched by the user `ylavnu`, which is unexpected behaviour and was not authorised by the other administrators. The device was then isolated and scanned for malware. The malware scan produced no results, so out of caution, the device was kept isolated and planned to have it reimaged/rebuilt.
 
 ## 4. Investigation
 
@@ -98,7 +98,7 @@ We observed the port scan script was launched by the SYSTEM account, which is un
 
 **PowerShell Execution**: A PowerShell script named portscan.ps1 was executed on "win-vm-mde" at 2025-06-08T16:29:40.1687498Z, just before the port scan began, leveraging PowerShell’s capabilities to automate the scanning process (T1059.001: PowerShell).
 
-**Unexpected SYSTEM Account Usage**: The portscan.ps1 script ran under the SYSTEM account, an unusual and unconfigured action by administrators, suggesting a misuse of legitimate credentials (T1078: Valid Accounts).
+**Unexpected User Account Usage**: The portscan.ps1 script was launched by the user `ylavnu`, an action that was unexpected and not authorized by administrators, suggesting possible misuse of user credentials or compromised account
     
     
 ### MITRE ATT&CK TTPs
@@ -114,7 +114,7 @@ We observed the port scan script was launched by the SYSTEM account, which is un
         
 3. **Tactic: Privilege Escalation (TA0004)** 
     
-    - **Technique: Valid Accounts (T1078)**  Adversaries use legitimate credentials (e.g., compromised or misused) to execute actions, possibly as the SYSTEM account. The `portscan.ps1` script was executed by the SYSTEM account, which was unexpected and not configured by administrators.
+    - **Technique: Valid Accounts (T1078)**  Adversaries use legitimate credentials (e.g., compromised or misused) to execute actions. The `portscan.ps1` script was executed by the user `ylavnu`, which was unexpected and not authorised by administrators.
   
 4. **Tactic: Discovery (TA0007)** 
     
@@ -125,36 +125,33 @@ We observed the port scan script was launched by the SYSTEM account, which is un
 ## 5. Response
 
 ### Actions Taken
-- Immediately isolated the system upon discovering the archiving activities.
+- Immediately isolated the compromised VM from the network to prevent further scanning or lateral movement.
 
-- Created a detection rule to monitor any suspicious activity. Within this alert, the machine will be automatically isolated, serving as a makeshift Data Loss Prevention (DLP) solution.
+- Performed a thorough malware scan and forensic investigation to identify persistence mechanisms or additional malicious activity.
 
-```kql
-DeviceFileEvents
-| where FileName endswith ".zip"
-| summarize ZipFileActivity = count() by RequestAccountName
-| where ZipFileActivity > 5
-```
-- Relayed the information to the John's manager, including the archived data being created at regular intervals via powershell script. There didn't appear to be any evidence of exfiltration.
----
+- Investigate why the user `ylavnu` launched the PowerShell script and tighten controls on privileged account access to prevent misuse.
+
+- Configured the firewall to block suspicious outbound or inbound traffic from the endpoint, especially unusual or sequential port connection attempts.
+
+- Deployed IDS/IPS solutions that can detect and block port scanning and other reconnaissance activities in real-time.
 
 ## 6. Improvement
 
 ### Prevention:
-- **Principle of Least Privilege and Access Controls**: Limit access based on employees' roles. Review and adjust any unnecessary or elevated access privileges to employees on the PIP program while also avoiding overly restrictive policies to allow the employee to improve performance.
-- **Continuous Monitoring**: Deploy Data Loss Prevention (DLP) solutions and implement continuous monitoring to detect and block suspicious behaviours such as silent tool installation, data compression or exfiltration attempts.
+- **Network Segmentation and Egress Controls**: Segment the internal network to limit lateral movement and reconnaissance scope. Implement network egress filtering to block unauthorized scanning and connection attempts within the LAN.
 - **PowerShell Restrictions**: Place PowerShell into Constrained Language Mode, reducing risk of executing malicious scripts.
-- **Real-Time Alerting**: Use EDR and DLP solutions to detect anomalies such as unauthorised archive creation and silent Powershell program installations
+- **Real-Time Alerting**: Use Endpoint Detection and Response (EDR) tools and Intrusion Detection/Prevention Systems (IDS/IPS) to monitor for suspicious PowerShell executions and sequential port scanning activity. Configure alerts for unusual user activity, especially involving scripting or network scanning.
 
 ### Threat Hunting:
-- Use KQL queries to focus on Powershell commands installing tools or compression utilities (7-Zip) and creation of archive files (.zip, .rar)
-- Correlate network events between `DeviceFileEvents` and `DeviceProcessEvents` to detect potential exfiltration attempts
-- Regularly audit changes to user privileges especially unauthorised privilege escalations
+- Use KQL queries to detect PowerShell scripts related to port scanning or network reconnaissance, focusing on command lines invoking TCP connection attempts or scanning utilities.
+- Correlate  `DeviceNetworkEvents` and `DeviceProcessEvents` to identify processes (like portscan.ps1) that precede or coincide with sequential failed connection attempts, indicating scanning behavior.
+- Regularly audit changes to user privileges especially unauthorised privilege escalations or scripting capabilities by users like `ylavnu`.
+- Establish normal user and network behavior baselines to detect deviations such as unusual PowerShell usage or network scanning patterns originating from endpoints.
 
 ---
 
 ## Conclusion
 
-Data exfiltration remains a formidable threat from those that may or may not have appropriate access controls. It is critical to monitor employee behaviour closely through necessary tools and telemetry to mitigate these risks. Though this investigation did not uncover any critical or confirmed external data transfer, the tactics that were used exposed severe security gaps. Addressing these gaps is necessary to strengthen defences against attacks from within.
+Port scanning is one of the most common techniques used to assess a target’s security posture. Sequential and chronological scanning patterns are relatively straightforward to detect. Maintaining continuous monitoring through firewalls and IDS/IPS solutions is critical to prevent threat actors from gaining a foothold. Fortunately, in this case, the connection attempts were unsuccessful, and the opportunity to exploit any open ports was effectively thwarted.
 
 
