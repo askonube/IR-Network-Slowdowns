@@ -3,7 +3,7 @@
 
 ## Overview
 
-The project illustrates a threat hunting investigation focused on a potential unauthorised data exfiltration attempt by a threat from within the organisation. After ruling out external threats, the investigation shifted focus to potentially compromised insiders — those who may have fallen victim to social engineering, credential theft, or malware infection — as well as disgruntled employees motivated by revenge. The primary tool used was **Microsoft Defender for Endpoint (MDE)**, while leveraging Kusto Query Language (KQL) to query detailed threat hunting logs to identify indicators of unauthorised data exfiltration. The findings showcase the importance of continuous monitoring and proactive threat hunting to mitigate insider risks and safeguard sensitive organizational data.
+A threat hunt investigation was conducted regarding a sudden rapid decrease in network speed in a local area network (LAN) working environment. Coordinated and sophisticated attacks seem rather unlikely and may point to endpoint activity within the internal network. The primary tool here used was **Microsoft Defender for Endpoint (MDE)**, while leveraging Kusto Query Language (KQL) to query detailed threat hunting logs to identify large files downloaded, port scans, and numerous failed connection attempts. The findings below highlight the importance of implementing safeguards that will flag any suspicious behaviour from inside the network.
 
 
 ---
@@ -18,16 +18,21 @@ Currently, the traffic originating from the local area network (LAN) is allowed 
 
 ### Hypothesis:
 
-John is an administrator on his corporate device with unrestricted access to applications. After his recent placement in the Performance Improvement Plan (PIP), he may try to archive/compress sensitive information and transfer it to an external location for exfiltration.
+All traffic originating from within the local network is by default allowed by all hosts. There is also unrestricted use of PowerShell and other applications in the environment. It's possible someone is either downloading large files or performing a port scan against hosts in the local network.
 
 ## 2. Data Collection
   
 ### Action:
-Searched the following Microsoft Defender for Endpoint tables:
 
-- `DeviceFileEvents`
-- `DeviceProcessEvents`
-- `DeviceNetworkEvents`
+Inspect logs for execessive successful/failed connections from any devices. If discovered, pivot and inspect those devices for any suspicious file or process events.
+
+Ensure the relevant tables contain recent logs:
+
+```kql
+- DeviceNetworkEvents
+- DeviceFileEvents
+- DeviceProcessEvents
+```kql
 
 #### Initial Findings:
 
