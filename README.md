@@ -82,7 +82,7 @@ DeviceProcessEvents
 <img width="973" alt="Screenshot 2025-06-09 014536" src="https://github.com/user-attachments/assets/2ad379da-fa9b-4bf7-b28c-4fc1e5ea6787" />
 
 
-The suspected computer was accessed and found the PowerShell script that was used to conduct a port scan.
+We accessed the suspected computer and found the PowerShell script that was used to conduct a port scan.
 
 <img width="758" alt="Pasted image 20250329134622" src="https://github.com/user-attachments/assets/5d49885c-ea06-4ec3-b459-d741d8b840e2" />
 
