@@ -53,7 +53,7 @@ DeviceNetworkEvents
 
 ### Findings
 
-After observing failed connection requests from a suspected host (10.0.0.137) in chronological order, we noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
+After observing failed connection requests from a suspected host `(10.0.0.137)` in chronological order, we noticed a port scan was taking place due to the sequential order of the ports. There were several port scans being conducted.
 
 ```kql
 let IPinQuestion = "10.0.0.137";
@@ -67,7 +67,7 @@ DeviceNetworkEvents
 
 ![image](https://github.com/user-attachments/assets/3dceadab-d92f-4ea4-a9e6-6afb049ad088)
 
-We can see that the first port that was scanned started on 09 June 2025 at 00:30:19 or 2025-06-08T16:30:19.4145359Z. We pivoted to the DeviceProcessEvents table to see if we could see anything suspicious and specified 10 minutes before and after the port scan started. We noticed a PowerShell script named portscan.ps1 launch at 2025-06-08T16:29:40.1687498Z.
+We can see that the first port that was scanned started on `09 June 2025` at `00:30:19` or `2025-06-08T16:30:19.4145359Z`. We pivoted to the `DeviceProcessEvents` table to see if we could see anything suspicious and specified 10 minutes before and after the port scan started. We noticed a PowerShell script named `portscan.ps1` launch at `2025-06-08T16:29:40.1687498Z`.
 
 ```kql
 let VMName = "win-vm-mde";
@@ -90,15 +90,15 @@ We observed the port scan script was launched by the user `ylavnu`, which is une
 
 ## 4. Investigation
 
-**Suspicious Activity Origin**: An endpoint within the 10.0.0.0/16 network, specifically the Windows VM "win-vm-mde" (IP: 10.0.0.137), initiated unusual activity causing a significant network slowdown, as observed by the networking team on June 09, 2025.
+**Suspicious Activity Origin**: An endpoint within the 10.0.0.0/16 network, specifically the Windows VM `win-vm-mde` (IP: 10.0.0.137), initiated unusual activity causing a significant network slowdown, as observed by the networking team on June 09, 2025.
 
 **Potential Reconnaissance**: The sequential scanning of IP addresses within the 10.0.0.0/16 network indicates an attempt to gather information about the internal network, possibly as a precursor to further attacks or to map the environment (T1595.001: Scanning IP Blocks).
 
 **Discovery via Port Scanning**: The device conducted a port scan, systematically targeting sequential ports on other hosts within the LAN, as detected by numerous failed connection attempts in Microsoft Defender for Endpoint logs (T1046: Network Service Discovery), likely to identify vulnerable systems or services.
 
-**PowerShell Execution**: A PowerShell script named portscan.ps1 was executed on "win-vm-mde" at 2025-06-08T16:29:40.1687498Z, just before the port scan began, leveraging PowerShell’s capabilities to automate the scanning process (T1059.001: PowerShell).
+**PowerShell Execution**: A PowerShell script named `portscan.ps1` was executed on `win-vm-mde` at `2025-06-08T16:29:40.1687498Z`, just before the port scan began, leveraging PowerShell’s capabilities to automate the scanning process (T1059.001: PowerShell).
 
-**Unexpected User Account Usage**: The portscan.ps1 script was launched by the user `ylavnu`, an action that was unexpected and not authorized by administrators, suggesting possible misuse of user credentials or compromised account
+**Unexpected User Account Usage**: The `portscan.ps1` script was launched by the user `ylavnu`, an action that was unexpected and not authorized by administrators, suggesting possible misuse of user credentials or compromised account
     
     
 ### MITRE ATT&CK TTPs
@@ -109,7 +109,7 @@ We observed the port scan script was launched by the user `ylavnu`, which is une
  
 2. **Tactic: Execution (TA0002)** 
     
-    - **Technique: PowerShell (T1059.001)** Adversaries use PowerShell to execute commands or scripts, often for malicious purposes, due to its legitimate use and powerful capabilities. The KQL query on `DeviceProcessEvents` identified `portscan.ps1`, a PowerShell script, launched at 2025-06-08T16:29:40.1687498Z, just before the port scan.
+    - **Technique: PowerShell (T1059.001)** Adversaries use PowerShell to execute commands or scripts, often for malicious purposes, due to its legitimate use and powerful capabilities. The KQL query on `DeviceProcessEvents` identified `portscan.ps1`, a PowerShell script, launched at `2025-06-08T16:29:40.1687498Z`, just before the port scan.
         
         
 3. **Tactic: Privilege Escalation (TA0004)** 
@@ -118,7 +118,7 @@ We observed the port scan script was launched by the user `ylavnu`, which is une
   
 4. **Tactic: Discovery (TA0007)** 
     
-    - **Technique: Network Service Discovery (T1046)** Adversaries use port scanning to identify open ports and services on target hosts within the network. The KQL query on DeviceNetworkEvents revealed that the failed connection attempts from 10.0.0.137 targeted ports in a sequential and chronological pattern, focusing on commonly used ports. This behavior strongly indicates a methodical port scan conducted around 2025-06-08T16:30:19.4145359Z.
+    - **Technique: Network Service Discovery (T1046)** Adversaries use port scanning to identify open ports and services on target hosts within the network. The KQL query on `DeviceNetworkEvents` revealed that the failed connection attempts from `10.0.0.137` targeted ports in a sequential and chronological pattern, focusing on commonly used ports. This behavior strongly indicates a methodical port scan conducted around `2025-06-08T16:30:19.4145359Z`.
 
 ---
 
