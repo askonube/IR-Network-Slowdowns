@@ -90,16 +90,13 @@ We observed the port scan script was launched by the user `ylavnu`, which is une
 
 ## 4. Investigation
 
-**Suspicious Activity Origin**: An endpoint within the 10.0.0.0/16 network, specifically the Windows VM `win-vm-mde` (IP: 10.0.0.137), initiated unusual activity causing a significant network slowdown, as observed by the networking team on June 09, 2025.
+The networking team detected significant network slowdown traced back to a Windows VM named win-vm-mde `(IP: 10.0.0.137)` within the `10.0.0.0/16` subnet. Investigation revealed that this endpoint was actively conducting unusual network activity.
 
-**Potential Reconnaissance**: The sequential scanning of IP addresses within the 10.0.0.0/16 network indicates an attempt to gather information about the internal network, possibly as a precursor to further attacks or to map the environment (T1595.001: Scanning IP Blocks).
+Specifically, the device performed a systematic scan of IP addresses across the internal network, likely aiming to map available hosts and identify potential targets. This scanning activity was characterized by numerous failed connection attempts to sequential ports on other devices within the LAN, suggesting an automated port scanning process to discover network services.
 
-**Discovery via Port Scanning**: The device conducted a port scan, systematically targeting sequential ports on other hosts within the LAN, as detected by numerous failed connection attempts in Microsoft Defender for Endpoint logs (T1046: Network Service Discovery), likely to identify vulnerable systems or services.
+Prior to the port scanning, a PowerShell script named portscan.ps1 was executed on the same endpoint at approximately 16:29 UTC on June 8, 2025. This script appears to have automated the scanning activity, leveraging PowerShell’s scripting capabilities.
 
-**PowerShell Execution**: A PowerShell script named `portscan.ps1` was executed on `win-vm-mde` at `2025-06-08T16:29:40.1687498Z`, just before the port scan began, leveraging PowerShell’s capabilities to automate the scanning process (T1059.001: PowerShell).
-
-**Unexpected User Account Usage**: The `portscan.ps1` script was launched by the user `ylavnu`, an action that was unexpected and not authorized by administrators, suggesting possible misuse of user credentials or compromised account
-    
+Notably, the execution of this script was initiated by the user `ylavnu`, whose use of this script was unexpected and unauthorized according to administrative records. This indicates possible misuse of legitimate credentials or a compromised user account.
     
 ### MITRE ATT&CK TTPs
 
